@@ -1,0 +1,13 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+*.log
+.DS_Store
+*.env*.local
+personal_pay.db
+personal_pay.db-wal
+personal_pay.db-shm
+Calculador/~$*.xlsx
+Calculador/*.xlsx
