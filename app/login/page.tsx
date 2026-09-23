@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Lock, Mail, ArrowRight, ShieldCheck, UserCheck, AlertCircle, Loader2 } from 'lucide-react';
+import { Lock, Mail, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -43,17 +43,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickLogin = (role: 'admin' | 'operador') => {
-    if (role === 'admin') {
-      setEmail('admin@personalpay.com.ar');
-      setPassword('admin123');
-      handleSubmit(undefined, 'admin@personalpay.com.ar', 'admin123');
-    } else {
-      setEmail('operador@personalpay.com.ar');
-      setPassword('operador123');
-      handleSubmit(undefined, 'operador@personalpay.com.ar', 'operador123');
-    }
-  };
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center py-8 px-4">
@@ -147,47 +136,6 @@ export default function LoginPage() {
                 )}
               </button>
             </form>
-
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200" />
-              </div>
-              <div className="relative flex justify-center text-[10px] uppercase font-bold text-slate-400 bg-white px-2">
-                Accesos Rápidos de Prueba
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('admin')}
-                disabled={loading}
-                className="p-3 text-left rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/50 transition-all group"
-              >
-                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 group-hover:text-blue-600">
-                  <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Administrador</span>
-                </div>
-                <p className="text-[10px] text-slate-500 mt-1 leading-snug">
-                  Control total: simulación, bases, backlog y usuarios.
-                </p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('operador')}
-                disabled={loading}
-                className="p-3 text-left rounded-xl border border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/50 transition-all group"
-              >
-                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 group-hover:text-emerald-600">
-                  <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Operador</span>
-                </div>
-                <p className="text-[10px] text-slate-500 mt-1 leading-snug">
-                  Acceso exclusivo para simulación y cálculo de deuda.
-                </p>
-              </button>
-            </div>
           </div>
         </div>
 

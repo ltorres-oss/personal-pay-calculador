@@ -7,9 +7,15 @@ import { Copy, Check, MessageSquare, PhoneCall } from 'lucide-react';
 
 interface Props {
   simulation: SimulationResult;
+  userRole?: string;
 }
 
-export default function QuickOfferCopy({ simulation }: Props) {
+export default function QuickOfferCopy({ simulation, userRole }: Props) {
+  // Restricción de permisos: el perfil Operador no puede ver el texto ni utilizar WhatsApp
+  if (userRole === 'operador') {
+    return null;
+  }
+
   const [copied, setCopied] = useState(false);
   const { customer, summary, dias_promesa, fecha_vencimiento_promesa } = simulation;
 

@@ -49,6 +49,21 @@ function SimulatorContent() {
       setRoleNotice('Acceso Restringido: Tu cuenta tiene perfil de Operador (habilitado exclusivamente para simulación de cuotas). Los módulos de administración requieren rol Administrador.');
     }
 
+    // Leer cookie de sesión inmediatamente para tener el rol instantáneamente
+    if (typeof document !== 'undefined') {
+      const match = document.cookie.match(/ppay_session=([^;]+)/);
+      if (match && match[1]) {
+        try {
+          const [base64] = match[1].split('.');
+          const decoded = atob(base64.replace(/-/g, '+').replace(/_/g, '/'));
+          const parsed = JSON.parse(decoded);
+          if (parsed && parsed.role) {
+            setCurrentUser(parsed);
+          }
+        } catch {}
+      }
+    }
+
     const loadMeta = () => {
       fetch('/api/metadata?t=' + Date.now(), { cache: 'no-store' })
         .then((res) => res.json())
@@ -322,8 +337,10 @@ function SimulatorContent() {
           {/* Financial Summary (KPI Cards) */}
           <FinancialSummary simulation={simulation} />
 
-          {/* Quick Offer Copy Box for WhatsApp & Call center */}
-          <QuickOfferCopy simulation={simulation} />
+          {/* Quick Offer Copy Box for WhatsApp & Call center - Solo visible para Administradores */}
+          {currentUser?.role === 'admin' && (
+            <QuickOfferCopy simulation={simulation} userRole={currentUser.role} />
+          )}
 
           {/* Detailed Cuotas Table */}
           <InstallmentsTable cuotas={simulation.cuotas} />
