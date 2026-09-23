@@ -1,15 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { SimulationResult } from '@/lib/types';
 import ClientProfile from '@/components/ClientProfile';
 import FinancialSummary from '@/components/FinancialSummary';
 import PromiseSelector from '@/components/PromiseSelector';
 import QuickOfferCopy from '@/components/QuickOfferCopy';
 import InstallmentsTable from '@/components/InstallmentsTable';
-import { Search, Loader2, AlertCircle, ArrowRight } from 'lucide-react';
+import { Search, Loader2, AlertCircle, ArrowRight, Database, Clock, ShieldAlert } from 'lucide-react';
 
-export default function HomePage() {
+function SimulatorContent() {
+  const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
   const [searchInput, setSearchInput] = useState('27283089938');
   const [promiseDays, setPromiseDays] = useState(2);
@@ -18,6 +20,51 @@ export default function HomePage() {
   const [simulation, setSimulation] = useState<SimulationResult | null>(null);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [metadata, setMetadata] = useState<{ filename: string; total_records: number; imported_at: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ email: string; name: string; role: string } | null>(null);
+  const [roleNotice, setRoleNotice] = useState<string | null>(null);
+
+  // Formatear fecha legible
+  const formatDateTime = (dateStr?: string) => {
+    if (!dateStr) return 'No registrada';
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleString('es-AR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }) + ' hs';
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Cargar metadatos y usuario actual
+  useEffect(() => {
+    setMounted(true);
+
+    if (searchParams.get('error') === 'unauthorized_role') {
+      setRoleNotice('Acceso Restringido: Tu cuenta tiene perfil de Operador (habilitado exclusivamente para simulación de cuotas). Los módulos de administración requieren rol Administrador.');
+    }
+
+    fetch('/api/metadata')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.metadata) setMetadata(data.metadata);
+      })
+      .catch(() => {});
+
+    fetch('/api/auth/me')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.user) setCurrentUser(data.user);
+      })
+      .catch(() => {});
+
+    handleSimulate('27283089938', 2);
+  }, []);
 
   // Función principal de simulación
   const handleSimulate = async (cuilToQuery = searchInput, days = promiseDays) => {
@@ -29,7 +76,8 @@ export default function HomePage() {
     setShowSuggestions(false);
 
     try {
-      const res = await fetch('/api/simulate?cuil=' + encodeURIComponent(cleanCuil) + '&promise_days=' + days);
+      const operatorParam = currentUser?.email ? `&operator=${encodeURIComponent(currentUser.email)}` : '';
+      const res = await fetch(`/api/simulate?cuil=${encodeURIComponent(cleanCuil)}&promise_days=${days}${operatorParam}`);
       const data = await res.json();
 
       if (!res.ok) {
@@ -44,11 +92,6 @@ export default function HomePage() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    setMounted(true);
-    handleSimulate('27283089938', 2);
-  }, []);
 
   // Buscar sugerencias mientras escribe
   useEffect(() => {
@@ -85,18 +128,58 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
+      {/* Aviso de Rol si intentó acceder a sección no autorizada */}
+      {roleNotice && (
+        <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-900 text-xs shadow-sm">
+          <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <strong className="block font-bold">Aviso de Permisos</strong>
+            <span>{roleNotice}</span>
+          </div>
+          <button
+            onClick={() => setRoleNotice(null)}
+            className="text-amber-600 hover:text-amber-800 text-xs font-bold px-2 py-1"
+          >
+            Entendido
+          </button>
+        </div>
+      )}
+
       {/* Top Search & Actions Bar */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-        <div className="max-w-3xl">
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <span>Simulador de Promesas & Deuda Personal Pay</span>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              Operativo
-            </span>
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Ingrese el CUIL o DNI del titular para liquidar cuotas vigentes y calcular intereses punitorios bonificados.
-          </p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="max-w-2xl">
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+              <span>Simulador de Promesas & Deuda Personal Pay</span>
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Operativo
+              </span>
+            </h1>
+            <p className="text-xs text-slate-500 mt-1">
+              Ingrese el CUIL o DNI del titular para liquidar cuotas vigentes y calcular intereses punitorios bonificados.
+            </p>
+          </div>
+
+          {/* Badge Informativo de Base Activa y Última Actualización */}
+          {metadata && (
+            <div className="flex items-center gap-3 bg-slate-50 border border-slate-200/80 px-4 py-2.5 rounded-xl self-start md:self-auto">
+              <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+                <Database className="w-4 h-4" />
+              </div>
+              <div className="flex flex-col text-xs">
+                <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                  <span>Base Activa:</span>
+                  <span className="text-blue-600 font-mono">{metadata.total_records.toLocaleString('es-AR')}</span>
+                  <span className="text-slate-400 font-normal">créditos</span>
+                </div>
+                <div className="flex items-center gap-1 text-[11px] text-slate-500 mt-0.5">
+                  <Clock className="w-3 h-3 text-cyan-600" />
+                  <span>Fecha de última actualización:</span>
+                  <strong className="text-slate-700 font-medium">{formatDateTime(metadata.imported_at)}</strong>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Search Input Box */}
@@ -170,61 +253,59 @@ export default function HomePage() {
               )}
             </button>
           </form>
-
-          {/* Quick test buttons */}
-          <div className="flex items-center gap-2 mt-3 text-xs text-slate-500">
-            <span>Ejemplos rápidos:</span>
-            <button
-              type="button"
-              onClick={() => {
-                setSearchInput('27283089938');
-                handleSimulate('27283089938', 2);
-              }}
-              className="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono font-semibold"
-            >
-              27283089938 (Caso Excel - 92 cuotas)
-            </button>
-          </div>
         </div>
       </div>
 
-      {/* Error Alert */}
+      {/* Error Banner */}
       {error && (
-        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 flex items-start gap-3 text-rose-800 text-sm">
-          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-          <div>
-            <strong className="font-bold">No se pudo realizar la simulación:</strong>
-            <p className="mt-0.5 text-xs text-rose-700">{error}</p>
-          </div>
+        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 flex items-center gap-3 text-sm">
+          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+          <span>{error}</span>
         </div>
       )}
 
-      {/* Loading Skeleton */}
-      {loading && !simulation && (
-        <div className="p-12 text-center text-slate-400 flex flex-col items-center justify-center space-y-3">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-          <span className="text-sm font-medium">Buscando créditos y evaluando fórmulas...</span>
-        </div>
-      )}
-
-      {/* Simulation Results View */}
+      {/* Main Results Workspace */}
       {simulation && (
         <div className="space-y-6">
-          <ClientProfile customer={simulation.customer} />
+          {/* Top Row: Client Profile & Promise Selector */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <ClientProfile customer={simulation.customer} />
+            </div>
+            <div>
+              <PromiseSelector
+                promiseDays={promiseDays}
+                onChange={handlePromiseChange}
+                targetDateStr={simulation.fecha_vencimiento_promesa}
+              />
+            </div>
+          </div>
 
-          <PromiseSelector
-            promiseDays={promiseDays}
-            onChange={handlePromiseChange}
-            targetDateStr={simulation.fecha_vencimiento_promesa}
-          />
-
+          {/* Financial Summary (KPI Cards) */}
           <FinancialSummary simulation={simulation} />
 
+          {/* Quick Offer Copy Box for WhatsApp & Call center */}
           <QuickOfferCopy simulation={simulation} />
 
+          {/* Detailed Cuotas Table */}
           <InstallmentsTable cuotas={simulation.cuotas} />
         </div>
       )}
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="p-16 text-center text-slate-400 flex flex-col items-center justify-center space-y-3">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          <span className="text-sm font-medium">Cargando Personal Pay...</span>
+        </div>
+      }
+    >
+      <SimulatorContent />
+    </React.Suspense>
   );
 }

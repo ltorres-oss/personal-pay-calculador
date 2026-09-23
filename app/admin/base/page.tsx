@@ -304,9 +304,9 @@ export default function BaseManagerPage() {
             </div>
 
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-              <span className="text-xs text-slate-400 block font-medium">Última Actualización</span>
+              <span className="text-xs text-slate-400 block font-medium">Fecha de Última Actualización</span>
               <strong className="text-slate-800 text-sm font-mono block mt-1">
-                {metadata.imported_at}
+                {metadata.imported_at ? new Date(metadata.imported_at).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' hs' : 'No registrada'}
               </strong>
             </div>
           </div>

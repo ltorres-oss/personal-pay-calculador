@@ -11,3 +11,6 @@ personal_pay.db-wal
 personal_pay.db-shm
 Calculador/~$*.xlsx
 Calculador/*.xlsx
+.vercel
+.env*
+Logos/

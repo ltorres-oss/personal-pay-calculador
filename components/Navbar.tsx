@@ -2,90 +2,187 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Calculator, Database, Users, ShieldCheck, ClipboardList } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Calculator, Database, Users, ShieldCheck, ClipboardList, LogOut, Clock, UserCheck } from 'lucide-react';
+
+interface SessionUser {
+  id: number;
+  email: string;
+  name: string;
+  role: 'admin' | 'operador';
+}
+
+interface BaseMetadata {
+  filename: string;
+  total_records: number;
+  imported_at: string;
+}
 
 export default function Navbar() {
   const pathname = usePathname();
-  const [metadata, setMetadata] = useState<{ filename: string; total_records: number; imported_at: string } | null>(null);
+  const router = useRouter();
+  const [metadata, setMetadata] = useState<BaseMetadata | null>(null);
+  const [user, setUser] = useState<SessionUser | null>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+
+    // Obtener metadatos de la base
     fetch('/api/metadata')
       .then((res) => res.json())
       .then((data) => {
         if (data.metadata) setMetadata(data.metadata);
       })
       .catch(() => {});
-  }, []);
 
+    // Obtener usuario autenticado
+    fetch('/api/auth/me')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.user) setUser(data.user);
+      })
+      .catch(() => {});
+  }, [pathname]);
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      setUser(null);
+      router.push('/login');
+      router.refresh();
+    } catch {
+      router.push('/login');
+    }
+  };
+
+  const isLoginPage = pathname === '/login';
+
+  // Formatear fecha legible en hora de Argentina
+  const formatDateTime = (dateStr?: string) => {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleString('es-AR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }) + ' hs';
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Enlaces según Rol
   const navLinks = [
-    { href: '/', label: 'Simulador de Cuotas', icon: Calculator },
-    { href: '/admin/backlog', label: 'Backlog de Consultas', icon: ClipboardList },
-    { href: '/admin/base', label: 'Base Diaria', icon: Database },
-    { href: '/admin/users', label: 'Usuarios Habilitados', icon: Users },
+    { href: '/', label: 'Simulador de Cuotas', icon: Calculator, roles: ['admin', 'operador'] },
+    { href: '/admin/backlog', label: 'Backlog de Consultas', icon: ClipboardList, roles: ['admin'] },
+    { href: '/admin/base', label: 'Base Diaria', icon: Database, roles: ['admin'] },
+    { href: '/admin/users', label: 'Usuarios Habilitados', icon: Users, roles: ['admin'] },
   ];
+
+  const visibleLinks = user ? navLinks.filter((l) => l.roles.includes(user.role)) : [];
 
   return (
     <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-50 shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
+          {/* Logos Oficiales PPAY & Wecross */}
           <div className="flex items-center space-x-6">
             <Link href="/" className="flex items-center space-x-3 group">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-400 flex items-center justify-center font-black text-white text-lg shadow-lg shadow-blue-500/30 group-hover:scale-105 transition-transform">
-                P
-              </div>
-              <div className="flex flex-col">
-                <span className="font-bold text-lg leading-tight tracking-tight text-white flex items-center gap-1.5">
-                  Personal <span className="text-cyan-400 font-extrabold">Pay</span>
-                  <span className="text-[10px] bg-blue-500/20 text-cyan-300 font-medium px-2 py-0.5 rounded-full border border-blue-500/30">
-                    PROMESAS
-                  </span>
-                </span>
-                <span className="text-[11px] text-slate-400">Calculador de Deuda & Punitorios</span>
+              <div className="flex items-center space-x-2.5 bg-slate-950/60 px-3 py-1.5 rounded-xl border border-slate-800 hover:border-slate-700 transition-colors">
+                <img
+                  src="/logo-ppay.png"
+                  alt="Personal Pay"
+                  className="h-7 w-auto object-contain"
+                />
+                <div className="h-5 w-px bg-slate-700" />
+                <img
+                  src="/logo-wecross.png"
+                  alt="Wecross"
+                  className="h-4.5 w-auto object-contain brightness-95"
+                />
               </div>
             </Link>
 
-            <nav className="hidden md:flex space-x-1">
-              {navLinks.map((link) => {
-                const Icon = link.icon;
-                const isActive = pathname === link.href;
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                      isActive
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800'
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                    <span>{link.label}</span>
-                  </Link>
-                );
-              })}
-            </nav>
+            {/* Menú de navegación según Rol */}
+            {!isLoginPage && mounted && (
+              <nav className="hidden md:flex space-x-1">
+                {visibleLinks.map((link) => {
+                  const Icon = link.icon;
+                  const isActive = pathname === link.href;
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                        isActive
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      <span>{link.label}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
+            )}
           </div>
 
-          <div className="flex items-center space-x-4">
-            {mounted && metadata && (
-              <div className="hidden lg:flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/60 text-xs text-slate-300">
-                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Base activa:</span>
-                <strong className="text-white font-mono">{metadata.total_records}</strong>
-                <span className="text-slate-400">créditos</span>
+          {/* Estado de la Base y Perfil de Usuario */}
+          <div className="flex items-center space-x-3">
+            {mounted && metadata && !isLoginPage && (
+              <div className="hidden lg:flex flex-col items-end px-3 py-1 rounded-lg bg-slate-800/80 border border-slate-700/60 text-xs">
+                <div className="flex items-center space-x-1.5">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-slate-300 font-medium">Base activa:</span>
+                  <strong className="text-white font-mono">{metadata.total_records.toLocaleString('es-AR')}</strong>
+                  <span className="text-slate-400">créditos</span>
+                </div>
+                <div className="flex items-center space-x-1 text-[10px] text-slate-400 mt-0.5">
+                  <Clock className="w-2.5 h-2.5 text-cyan-400" />
+                  <span>Última act:</span>
+                  <span className="text-cyan-300 font-medium">{formatDateTime(metadata.imported_at)}</span>
+                </div>
               </div>
             )}
 
-            <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs">
-              <ShieldCheck className="w-4 h-4 text-cyan-400" />
-              <div className="flex flex-col text-left">
-                <span className="text-slate-200 font-semibold">admin@personalpay.com.ar</span>
-                <span className="text-[10px] text-emerald-400 font-medium">Invitación Activa (Google)</span>
+            {!isLoginPage && mounted && user && (
+              <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs">
+                  {user.role === 'admin' ? (
+                    <ShieldCheck className="w-4 h-4 text-cyan-400 shrink-0" />
+                  ) : (
+                    <UserCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                  )}
+                  <div className="flex flex-col text-left">
+                    <span className="text-slate-200 font-semibold leading-tight">{user.name || user.email}</span>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span
+                        className={`text-[9px] uppercase font-bold px-1.5 py-0.2 rounded ${
+                          user.role === 'admin'
+                            ? 'bg-blue-500/20 text-cyan-300 border border-blue-500/30'
+                            : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        }`}
+                      >
+                        {user.role === 'admin' ? 'Administrador' : 'Operador'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleLogout}
+                  title="Cerrar Sesión"
+                  className="p-2 rounded-lg bg-slate-800 hover:bg-rose-950/60 hover:text-rose-400 border border-slate-700 hover:border-rose-800/80 text-slate-400 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
