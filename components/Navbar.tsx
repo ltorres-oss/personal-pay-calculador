@@ -18,17 +18,17 @@ interface BaseMetadata {
   imported_at: string;
 }
 
-export default function Navbar() {
+export default function Navbar({ initialUser }: { initialUser?: SessionUser | null }) {
   const pathname = usePathname();
   const router = useRouter();
   const [metadata, setMetadata] = useState<BaseMetadata | null>(null);
-  const [user, setUser] = useState<SessionUser | null>(null);
+  const [user, setUser] = useState<SessionUser | null>(initialUser || null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
 
-    // Obtener metadatos de la base
+    // Cargar metadatos de la base
     fetch('/api/metadata')
       .then((res) => res.json())
       .then((data) => {
@@ -36,14 +36,18 @@ export default function Navbar() {
       })
       .catch(() => {});
 
-    // Obtener usuario autenticado
+    // Siempre sincronizar sesión actualizada
     fetch('/api/auth/me')
       .then((res) => res.json())
       .then((data) => {
-        if (data.user) setUser(data.user);
+        if (data.user) {
+          setUser(data.user);
+        } else if (!initialUser) {
+          setUser(null);
+        }
       })
       .catch(() => {});
-  }, [pathname]);
+  }, [pathname, initialUser]);
 
   const handleLogout = async () => {
     try {
@@ -58,7 +62,7 @@ export default function Navbar() {
 
   const isLoginPage = pathname === '/login';
 
-  // Formatear fecha legible en hora de Argentina
+  // Formatear fecha legible
   const formatDateTime = (dateStr?: string) => {
     if (!dateStr) return '';
     try {
@@ -75,41 +79,46 @@ export default function Navbar() {
     }
   };
 
-  // Enlaces según Rol
+  // Enlaces de navegación
   const navLinks = [
-    { href: '/', label: 'Simulador de Cuotas', icon: Calculator, roles: ['admin', 'operador'] },
+    { href: '/', label: 'Simulador', icon: Calculator, roles: ['admin', 'operador'] },
     { href: '/admin/backlog', label: 'Backlog de Consultas', icon: ClipboardList, roles: ['admin'] },
     { href: '/admin/base', label: 'Base Diaria', icon: Database, roles: ['admin'] },
     { href: '/admin/users', label: 'Usuarios Habilitados', icon: Users, roles: ['admin'] },
   ];
 
-  const visibleLinks = user ? navLinks.filter((l) => l.roles.includes(user.role)) : [];
+  // Si aún no se sabe el rol o es admin, mostrar las opciones correspondientes
+  const currentRole = user?.role || (initialUser?.role ?? 'admin');
+  const visibleLinks = navLinks.filter((l) => l.roles.includes(currentRole));
 
   return (
     <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-50 shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logos Oficiales PPAY & Wecross */}
-          <div className="flex items-center space-x-6">
-            <Link href="/" className="flex items-center space-x-3 group">
-              <div className="flex items-center space-x-2.5 bg-slate-950/60 px-3 py-1.5 rounded-xl border border-slate-800 hover:border-slate-700 transition-colors">
+        <div className="flex items-center justify-between h-16 gap-4">
+          
+          {/* Lado Izquierdo: Logos Oficiales perfectamente enmarcados */}
+          <div className="flex items-center space-x-5 shrink-0">
+            <Link href="/" className="flex items-center group">
+              <div className="flex items-center space-x-3 bg-white px-3 py-1.5 rounded-xl shadow-sm border border-slate-200 group-hover:shadow transition-all">
                 <img
                   src="/logo-ppay.png"
                   alt="Personal Pay"
-                  className="h-7 w-auto object-contain"
+                  style={{ height: '22px', width: 'auto', maxHeight: '22px' }}
+                  className="object-contain block"
                 />
-                <div className="h-5 w-px bg-slate-700" />
+                <div className="h-4 w-px bg-slate-300" />
                 <img
                   src="/logo-wecross.png"
                   alt="Wecross"
-                  className="h-4.5 w-auto object-contain brightness-95"
+                  style={{ height: '18px', width: 'auto', maxHeight: '18px' }}
+                  className="object-contain block"
                 />
               </div>
             </Link>
 
-            {/* Menú de navegación según Rol */}
-            {!isLoginPage && mounted && (
-              <nav className="hidden md:flex space-x-1">
+            {/* Menú de Navegación según Rol (Visible en Desktop y Tablets) */}
+            {!isLoginPage && (
+              <nav className="flex items-center space-x-1 overflow-x-auto py-1">
                 {visibleLinks.map((link) => {
                   const Icon = link.icon;
                   const isActive = pathname === link.href;
@@ -117,7 +126,7 @@ export default function Navbar() {
                     <Link
                       key={link.href}
                       href={link.href}
-                      className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                      className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
                         isActive
                           ? 'bg-blue-600 text-white shadow-sm'
                           : 'text-slate-300 hover:text-white hover:bg-slate-800'
@@ -132,45 +141,46 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Estado de la Base y Perfil de Usuario */}
-          <div className="flex items-center space-x-3">
-            {mounted && metadata && !isLoginPage && (
-              <div className="hidden lg:flex flex-col items-end px-3 py-1 rounded-lg bg-slate-800/80 border border-slate-700/60 text-xs">
-                <div className="flex items-center space-x-1.5">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-slate-300 font-medium">Base activa:</span>
-                  <strong className="text-white font-mono">{metadata.total_records.toLocaleString('es-AR')}</strong>
-                  <span className="text-slate-400">créditos</span>
+          {/* Lado Derecho: Estado de Base y Usuario */}
+          {!isLoginPage && (
+            <div className="flex items-center space-x-3 shrink-0">
+              {metadata && (
+                <div className="hidden lg:flex flex-col items-end px-3 py-1 rounded-lg bg-slate-800/80 border border-slate-700/60 text-xs">
+                  <div className="flex items-center space-x-1.5">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-slate-300 font-medium">Base activa:</span>
+                    <strong className="text-white font-mono">{metadata.total_records.toLocaleString('es-AR')}</strong>
+                    <span className="text-slate-400">créditos</span>
+                  </div>
+                  <div className="flex items-center space-x-1 text-[10px] text-slate-400 mt-0.5">
+                    <Clock className="w-2.5 h-2.5 text-cyan-400" />
+                    <span>Última act:</span>
+                    <span className="text-cyan-300 font-medium">{formatDateTime(metadata.imported_at)}</span>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-1 text-[10px] text-slate-400 mt-0.5">
-                  <Clock className="w-2.5 h-2.5 text-cyan-400" />
-                  <span>Última act:</span>
-                  <span className="text-cyan-300 font-medium">{formatDateTime(metadata.imported_at)}</span>
-                </div>
-              </div>
-            )}
+              )}
 
-            {!isLoginPage && mounted && user && (
+              {/* Perfil del Usuario Activo */}
               <div className="flex items-center space-x-2">
                 <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs">
-                  {user.role === 'admin' ? (
+                  {currentRole === 'admin' ? (
                     <ShieldCheck className="w-4 h-4 text-cyan-400 shrink-0" />
                   ) : (
                     <UserCheck className="w-4 h-4 text-emerald-400 shrink-0" />
                   )}
                   <div className="flex flex-col text-left">
-                    <span className="text-slate-200 font-semibold leading-tight">{user.name || user.email}</span>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <span
-                        className={`text-[9px] uppercase font-bold px-1.5 py-0.2 rounded ${
-                          user.role === 'admin'
-                            ? 'bg-blue-500/20 text-cyan-300 border border-blue-500/30'
-                            : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                        }`}
-                      >
-                        {user.role === 'admin' ? 'Administrador' : 'Operador'}
-                      </span>
-                    </div>
+                    <span className="text-slate-200 font-semibold leading-tight text-xs">
+                      {user?.name || user?.email || (currentRole === 'admin' ? 'Administrador Principal' : 'Operador')}
+                    </span>
+                    <span
+                      className={`text-[9px] uppercase font-bold px-1.5 py-0.2 rounded w-fit mt-0.5 ${
+                        currentRole === 'admin'
+                          ? 'bg-blue-500/20 text-cyan-300 border border-blue-500/30'
+                          : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                      }`}
+                    >
+                      {currentRole === 'admin' ? 'Administrador' : 'Operador'}
+                    </span>
                   </div>
                 </div>
 
@@ -182,8 +192,8 @@ export default function Navbar() {
                   <LogOut className="w-4 h-4" />
                 </button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </header>
