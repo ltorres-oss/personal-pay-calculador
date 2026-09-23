@@ -36,8 +36,7 @@ export default function LoginPage() {
         throw new Error(data.error || 'Credenciales inválidas.');
       }
 
-      router.push('/');
-      router.refresh();
+      window.location.href = '/';
     } catch (err: any) {
       setError(err.message || 'Error de conexión.');
       setLoading(false);

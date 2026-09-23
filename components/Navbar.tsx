@@ -53,10 +53,9 @@ export default function Navbar({ initialUser }: { initialUser?: SessionUser | nu
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
       setUser(null);
-      router.push('/login');
-      router.refresh();
+      window.location.href = '/login';
     } catch {
-      router.push('/login');
+      window.location.href = '/login';
     }
   };
 
@@ -82,9 +81,9 @@ export default function Navbar({ initialUser }: { initialUser?: SessionUser | nu
   // Enlaces de navegación
   const navLinks = [
     { href: '/', label: 'Simulador', icon: Calculator, roles: ['admin', 'operador'] },
-    { href: '/admin/backlog', label: 'Backlog de Consultas', icon: ClipboardList, roles: ['admin'] },
+    { href: '/admin/backlog', label: 'Backlog', icon: ClipboardList, roles: ['admin'] },
     { href: '/admin/base', label: 'Base Diaria', icon: Database, roles: ['admin'] },
-    { href: '/admin/users', label: 'Usuarios Habilitados', icon: Users, roles: ['admin'] },
+    { href: '/admin/users', label: 'Usuarios', icon: Users, roles: ['admin'] },
   ];
 
   // Si aún no se sabe el rol o es admin, mostrar las opciones correspondientes
