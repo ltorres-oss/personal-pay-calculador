@@ -28,16 +28,28 @@ export default function Navbar({ initialUser }: { initialUser?: SessionUser | nu
   useEffect(() => {
     setMounted(true);
 
-    // Cargar metadatos de la base
-    fetch('/api/metadata')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.metadata) setMetadata(data.metadata);
-      })
-      .catch(() => {});
+    const loadMetadata = () => {
+      fetch('/api/metadata?t=' + Date.now(), { cache: 'no-store' })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.metadata) setMetadata(data.metadata);
+        })
+        .catch(() => {});
+    };
+
+    loadMetadata();
+
+    // Escuchar evento personalizado de actualización de base
+    const handleBaseUpdated = () => {
+      loadMetadata();
+    };
+    window.addEventListener('base_updated', handleBaseUpdated);
+
+    // Refrescar metadatos periódicamente
+    const interval = setInterval(loadMetadata, 20000);
 
     // Siempre sincronizar sesión actualizada
-    fetch('/api/auth/me')
+    fetch('/api/auth/me?t=' + Date.now(), { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.user) {
@@ -47,6 +59,11 @@ export default function Navbar({ initialUser }: { initialUser?: SessionUser | nu
         }
       })
       .catch(() => {});
+
+    return () => {
+      window.removeEventListener('base_updated', handleBaseUpdated);
+      clearInterval(interval);
+    };
   }, [pathname, initialUser]);
 
   const handleLogout = async () => {

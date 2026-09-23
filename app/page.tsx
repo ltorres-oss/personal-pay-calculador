@@ -49,19 +49,28 @@ function SimulatorContent() {
       setRoleNotice('Acceso Restringido: Tu cuenta tiene perfil de Operador (habilitado exclusivamente para simulación de cuotas). Los módulos de administración requieren rol Administrador.');
     }
 
-    fetch('/api/metadata')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.metadata) setMetadata(data.metadata);
-      })
-      .catch(() => {});
+    const loadMeta = () => {
+      fetch('/api/metadata?t=' + Date.now(), { cache: 'no-store' })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.metadata) setMetadata(data.metadata);
+        })
+        .catch(() => {});
+    };
 
-    fetch('/api/auth/me')
+    loadMeta();
+    window.addEventListener('base_updated', loadMeta);
+
+    fetch('/api/auth/me?t=' + Date.now(), { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.user) setCurrentUser(data.user);
       })
       .catch(() => {});
+
+    return () => {
+      window.removeEventListener('base_updated', loadMeta);
+    };
 
     handleSimulate('27283089938', 2);
   }, []);

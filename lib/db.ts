@@ -453,15 +453,20 @@ export async function insertDailyBaseBatch(records: any[]): Promise<{ inserted: 
 export async function finishDailyBaseUpload(metadataId: number): Promise<{ success: boolean; totalUniqueCuils: number }> {
   const supabase = getSupabaseClient();
   if (supabase) {
-    // Contar registros y cuils
+    // 1. Contar registros totales
     const { count: totalRecs } = await supabase.from('credits').select('*', { count: 'exact', head: true });
     
-    // Activar metadata
+    // 2. Desactivar metadatos anteriores
+    await supabase.from('base_metadata').update({ is_active: false }).neq('id', metadataId);
+
+    // 3. Activar metadata actual con fecha de cierre exacta
+    const nowIso = new Date().toISOString();
     await supabase
       .from('base_metadata')
       .update({
         total_records: totalRecs || 0,
         is_active: true,
+        imported_at: nowIso,
       })
       .eq('id', metadataId);
 

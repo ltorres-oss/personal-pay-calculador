@@ -20,6 +20,14 @@ export function getSupabaseClient(): SupabaseClient | null {
       auth: {
         persistSession: false,
       },
+      global: {
+        fetch: (url, options = {}) => {
+          return fetch(url, {
+            ...options,
+            cache: 'no-store',
+          });
+        },
+      },
     });
   }
   return supabaseInstance;

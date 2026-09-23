@@ -14,7 +14,7 @@ export default function BaseManagerPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchMeta = () => {
-    fetch('/api/metadata')
+    fetch('/api/metadata?t=' + Date.now(), { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         if (data.metadata) setMetadata(data.metadata);
@@ -169,6 +169,9 @@ export default function BaseManagerPage() {
         `Base diaria actualizada: se borró la información previa y se cargaron ${formattedRecords.length.toLocaleString('es-AR')} registros exitosamente.`
       );
       fetchMeta();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('base_updated'));
+      }
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || 'Error procesando el archivo.');
