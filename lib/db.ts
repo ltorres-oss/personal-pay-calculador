@@ -2,6 +2,7 @@ import path from 'path';
 import { DatabaseSync } from 'node:sqlite';
 import { CreditRecord, BaseMetadata, AuthorizedUser, SimulationHistoryRecord } from './types';
 import { getSupabaseClient, isSupabaseConfigured } from './supabase';
+import { hashPassword } from './auth';
 
 let sqliteDbInstance: DatabaseSync | null = null;
 
@@ -190,6 +191,7 @@ export async function getAuthorizedUsers(): Promise<AuthorizedUser[]> {
         invited_by: u.invited_by,
         invited_at: u.created_at,
         last_login_at: u.last_login_at,
+        has_password: Boolean(u.password_hash),
       }));
     }
     return [];
@@ -204,15 +206,19 @@ export async function addAuthorizedUser(
   email: string,
   name: string,
   role: 'admin' | 'operador' = 'operador',
+  password?: string,
   invitedBy = 'admin'
 ) {
   const cleanEmail = email.toLowerCase().trim();
+  const passwordHash = password?.trim() ? hashPassword(password.trim()) : null;
+
   const supabase = getSupabaseClient();
   if (supabase) {
     await supabase.from('users').insert({
       email: cleanEmail,
       name: name.trim(),
       role,
+      password_hash: passwordHash,
       is_active: true,
       invited_by: invitedBy,
     });
@@ -224,6 +230,23 @@ export async function addAuthorizedUser(
     'INSERT INTO authorized_users (email, name, role, is_active, invited_by) VALUES (?, ?, ?, 1, ?)'
   );
   stmt.run(cleanEmail, name.trim(), role, invitedBy);
+}
+
+export async function updateUserPassword(id: number, newPassword: string) {
+  if (!newPassword || newPassword.trim().length === 0) {
+    throw new Error('La contraseña no puede estar vacía.');
+  }
+  const passwordHash = hashPassword(newPassword.trim());
+
+  const supabase = getSupabaseClient();
+  if (supabase) {
+    const { error } = await supabase.from('users').update({ password_hash: passwordHash }).eq('id', id);
+    if (error) throw new Error(error.message);
+    return;
+  }
+
+  const db = getSqliteDb();
+  // SQLite fallback
 }
 
 export async function toggleUserStatus(id: number) {

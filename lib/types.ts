@@ -97,6 +97,7 @@ export interface AuthorizedUser {
   invited_by: string;
   invited_at: string;
   last_login_at: string | null;
+  has_password?: boolean;
 }
 
 export interface BaseMetadata {
