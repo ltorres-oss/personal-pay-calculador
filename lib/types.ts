@@ -72,6 +72,8 @@ export interface SimulationResult {
   dias_promesa: number;
   fecha_simulacion: string;
   fecha_vencimiento_promesa: string;
+  has_tna_zero: boolean;
+  tna_zero_count: number;
   summary: {
     monto_total: number;
     monto_actualizado: number;

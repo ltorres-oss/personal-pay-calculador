@@ -42,7 +42,15 @@ export function simulateCreditDebt(
     throw new Error('No se encontraron registros de créditos para el CUIL indicado.');
   }
 
-  const safePromiseDays = Math.max(0, Math.floor(promiseDays || 0));
+  // Detección de productos con TNA 0 o vacío
+  const tnaZeroCredits = credits.filter(
+    (c) => c.tna_credito === null || c.tna_credito === undefined || Number(c.tna_credito) <= 0
+  );
+  const hasTnaZero = tnaZeroCredits.length > 0;
+  const tnaZeroCount = tnaZeroCredits.length;
+
+  // Si tiene productos con TNA 0 o vacío, no se pueden calcular días de promesa (se fija obligatoriamente en 0)
+  const safePromiseDays = hasTnaZero ? 0 : Math.max(0, Math.floor(promiseDays || 0));
   const calculatedInstallments = credits.map((c) =>
     calculateInstallment(c, safePromiseDays)
   );
@@ -89,6 +97,8 @@ export function simulateCreditDebt(
     dias_promesa: safePromiseDays,
     fecha_simulacion: now.toISOString(),
     fecha_vencimiento_promesa: fechaPromesa.toISOString().split('T')[0],
+    has_tna_zero: hasTnaZero,
+    tna_zero_count: tnaZeroCount,
     summary: {
       monto_total: montoTotal,
       monto_actualizado: montoActualizado,

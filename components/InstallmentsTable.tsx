@@ -100,9 +100,16 @@ export default function InstallmentsTable({ cuotas }: Props) {
 
                     {/* TNA (C) */}
                     <td className="py-3 px-2 text-center font-mono">
-                      <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-semibold">
-                        {row.tna_credito}%
-                      </span>
+                      {row.tna_credito && Number(row.tna_credito) > 0 ? (
+                        <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-semibold">
+                          {row.tna_credito}%
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-black shadow-sm inline-flex items-center gap-1 justify-center">
+                          <span>⚠️</span>
+                          <span>TNA 0%</span>
+                        </span>
+                      )}
                     </td>
 
                     {/* Dias mora (D) */}

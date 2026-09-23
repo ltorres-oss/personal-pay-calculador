@@ -85,6 +85,9 @@ function SimulatorContent() {
       }
 
       setSimulation(data);
+      if (data.has_tna_zero) {
+        setPromiseDays(0);
+      }
     } catch (err: any) {
       setError(err.message || 'Error inesperado.');
       setSimulation(null);
@@ -267,6 +270,31 @@ function SimulatorContent() {
       {/* Main Results Workspace */}
       {simulation && (
         <div className="space-y-6">
+          {/* Alerta Crítica en ROJO Fuerte si el cliente tiene productos con TNA 0% o Vacío */}
+          {simulation.has_tna_zero && (
+            <div className="bg-red-600 text-white rounded-2xl p-5 shadow-xl shadow-red-600/30 border-2 border-red-700 flex flex-col sm:flex-row items-start sm:items-center gap-4 animate-in fade-in duration-300">
+              <div className="w-12 h-12 rounded-2xl bg-red-700/90 flex items-center justify-center text-3xl shrink-0 shadow-inner">
+                ⚠️
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="bg-red-950/70 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border border-red-400/40">
+                    RESTRICCIÓN CRÍTICA
+                  </span>
+                  <span className="text-xs font-bold text-red-100">
+                    {simulation.tna_zero_count} cuota(s) con TNA 0% o sin tasa
+                  </span>
+                </div>
+                <h3 className="text-base font-black tracking-tight text-white mt-1">
+                  ¡ATENCIÓN OPERADOR! NO ES POSIBLE OTORGAR DÍAS DE PROMESA A ESTE CLIENTE
+                </h3>
+                <p className="text-xs text-red-100 mt-1 leading-relaxed">
+                  Este titular registra productos o cuotas con <strong>TNA 0% o vacía</strong>. Por normativa de Personal Pay, <strong>NO es posible simular ni conceder días de promesa a futuro</strong>. Los valores exhibidos corresponden de forma estricta y única a la <strong>deuda al día de la fecha (pago en el día de hoy)</strong>.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Top Row: Client Profile & Promise Selector */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
@@ -277,6 +305,7 @@ function SimulatorContent() {
                 promiseDays={promiseDays}
                 onChange={handlePromiseChange}
                 targetDateStr={simulation.fecha_vencimiento_promesa}
+                hasTnaZero={simulation.has_tna_zero}
               />
             </div>
           </div>

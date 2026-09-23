@@ -15,13 +15,17 @@ export default function QuickOfferCopy({ simulation }: Props) {
 
   const generateMessage = () => {
     const saludo = customer.full_name ? `Estimado/a ${customer.full_name}` : 'Estimado/a cliente';
+    const fechaCompromiso = simulation.has_tna_zero
+      ? `📅 Fecha límite de compromiso de pago: *HOY MISMO (${fecha_vencimiento_promesa})* (⚠️ Liquidación válida exclusivamente para el día de la fecha).\n`
+      : `📅 Fecha límite de compromiso de pago: *${fecha_vencimiento_promesa}* (${dias_promesa} día/s de promesa).\n`;
+
     return (
       `${saludo}, le contactamos de Personal Pay en relación a sus obligaciones pendientes (CUIL: ${customer.cuil}).\n\n` +
       `Le acercamos una *propuesta exclusiva de cancelación con bonificación total de punitorios*:\n` +
       `📌 Deuda simulada con intereses: ${formatCurrency(summary.monto_actualizado)}\n` +
       `🎁 Bonificación de Punitorios (100%): - ${formatCurrency(summary.reintegro)}\n` +
       `👉 *MONTO FINAL A ABONAR: ${formatCurrency(summary.monto_final)}*\n\n` +
-      `📅 Fecha límite de compromiso de pago: *${fecha_vencimiento_promesa}* (${dias_promesa} día/s de promesa).\n` +
+      fechaCompromiso +
       `Por favor responda este mensaje con el comprobante una vez realizada la transferencia para aplicar la bonificación.`
     );
   };
